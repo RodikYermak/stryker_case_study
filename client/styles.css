@@ -15,3 +15,400 @@
 * {
     font-family: var(--font-primary);
 }
+/* Layout helpers */
+.container {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* Header */
+.app-header {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--underscore-color);
+    background: var(--background-color);
+}
+
+/* Left side: logo | divider | title */
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0; /* prevents title overflow */
+}
+
+.logo {
+    display: block;
+    height: 28px; /* adjust to your asset */
+    width: auto;
+}
+
+.v-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--brand-color);
+    margin: 0 4px 0 8px;
+    border-radius: 1px;
+}
+
+.app-title {
+    color: var(--text-color);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 14px; /* matches compact UI in Figma */
+    white-space: nowrap;
+}
+
+/* Right side: credits pill + user button */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.credits {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    background: #fff;
+    line-height: 1;
+}
+
+.credits-value {
+    font-weight: 800;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.credits-label {
+    color: var(--labels-color);
+    font-size: 12px;
+}
+
+/* Circular user button */
+.user-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    padding: 0;
+    cursor: pointer;
+}
+
+.user-btn img {
+    width: 18px; /* scale to fit your icon */
+    height: 18px;
+    object-fit: contain;
+}
+
+/* Optional: center content to 1440 like in Figma */
+.app-header {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+/* Row layout under header */
+.uploader-row {
+    display: grid;
+    grid-template-columns: 220px 1fr; /* left dropdown, right drop area */
+    gap: 34px; /* matches Figma spacing */
+    padding: 24px; /* page padding below header */
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+/* ——— Model picker ——— */
+.model-cell {
+    display: grid;
+    gap: 6px;
+    align-content: start;
+}
+.model-label {
+    position: absolute;
+    left: -9999px; /* visually hidden label but accessible */
+}
+.model-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #fff;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px 36px 10px 12px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-color);
+    line-height: 1;
+    position: relative;
+    width: 100%;
+    background-image: linear-gradient(45deg, transparent 50%, var(--labels-color) 50%),
+        linear-gradient(135deg, var(--labels-color) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+
+/* ——— Dropzone ——— */
+.dropzone {
+    min-height: 120px;
+    width: 100%;
+    background: #f4f6f6; /* Figma: F4F6F6 */
+    border: 2px dashed var(--border-color); /* Figma stroke: AEBEC0, 2px */
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.dropzone.is-dragover {
+    background: #eef3f3;
+    border-color: var(--labels-color);
+}
+.file-input {
+    display: none;
+}
+
+.dropzone-content {
+    display: grid;
+    place-items: center;
+    gap: 10px;
+    text-align: center;
+}
+.upload-icon {
+    color: var(--labels-color);
+    opacity: 0.9;
+}
+.dropzone-text {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-color);
+}
+.dropzone-text strong {
+    font-weight: 800;
+}
+.dropzone-text b {
+    font-weight: 800;
+}
+
+/* Browse button (subtle, secondary) */
+.browse-btn {
+    border: 1px solid var(--border-color);
+    background: #fff;
+    border-radius: 9999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--labels-color);
+    cursor: pointer;
+}
+.browse-btn:hover {
+    border-color: var(--labels-color);
+}
+
+/* Picked files preview */
+.file-list {
+    max-width: 1440px;
+    margin: 12px auto 0;
+    padding: 0 24px;
+}
+.file-list ul {
+    margin: 0;
+    padding-left: 18px;
+}
+.file-list li {
+    margin: 4px 0;
+    color: var(--labels-color);
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Preview card --- */
+.preview {
+    display: grid;
+    place-items: center;
+    margin: 24px auto 0;
+    max-width: 1440px;
+    padding: 0 24px;
+}
+
+.preview-inner {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    background: #fff;
+    border-radius: 12px;
+}
+
+/* Image/PDF visual */
+#previewImg,
+.pdf-fallback {
+    width: 220px; /* similar scale to your Figma */
+    height: 300px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f4f6f6;
+    border: 1px solid var(--border-color);
+}
+
+.pdf-fallback {
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    color: var(--labels-color);
+    letter-spacing: 0.08em;
+}
+
+/* Progress bar */
+.progress-wrap {
+    width: 220px;
+    height: 20px;
+    background: #e6eaeb;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    background: var(--brand-color); /* #ffb503 */
+    width: 0%;
+    transition: width 120ms linear;
+}
+
+/* Extract button */
+.extract-btn {
+    width: 220px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--brand-color);
+    color: #000;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06) inset;
+}
+.extract-btn:disabled,
+.extract-btn[hidden] {
+    display: none;
+}
+
+/* ——— Extraction layout ——— */
+.extraction {
+    max-width: 1440px;
+    margin: 24px auto 48px;
+    padding: 0 24px;
+}
+.extraction-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr; /* left thumbnail, right form */
+    gap: 34px; /* Figma spacing */
+    align-items: start;
+}
+
+/* Left column */
+.extract-thumb {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+}
+.extract-thumb img,
+#extractThumbPdf {
+    width: 260px;
+    height: 360px;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #f4f6f6;
+}
+
+/* Save button */
+.save-btn {
+    width: 260px;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: var(--brand-color);
+    color: #000;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06) inset;
+}
+
+/* Right column: form */
+.extract-form {
+    display: grid;
+    gap: 10px;
+}
+.field {
+    display: grid;
+    gap: 6px;
+}
+.field label {
+    font-size: 12px;
+    color: var(--labels-color);
+    letter-spacing: 0.04em;
+}
+.field input {
+    height: 32px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-color);
+    background: #fff;
+}
+.row-3 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+/* Hide helpers based on state */
+[hidden] {
+    display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .extraction-grid {
+        grid-template-columns: 1fr;
+    }
+    .extract-thumb {
+        order: -1;
+    }
+}
+
+/* Responsiveness */
+@media (max-width: 780px) {
+    .uploader-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .model-select {
+        max-width: 240px;
+    }
+}
+
+/* Small screens: let title shrink before wrapping */
+@media (max-width: 640px) {
+    .app-title {
+        font-size: 12px;
+    }
+    .credits {
+        padding: 5px 8px;
+    }
+    .user-btn {
+        width: 28px;
+        height: 28px;
+    }
+}

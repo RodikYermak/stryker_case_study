@@ -13,22 +13,427 @@
             rel="stylesheet" />
     </head>
     <body>
-        <header>
+        <!-- <header>
             <img src="./assets/logo.png" alt="Stryker logo" />
             <img src="./assets/divider.png" alt="Divider" />
             <span>AI DATA EXTRACTION TOOL</span>
             <span>99 Credits</span>
             <img src="./assets/user.png" alt="User settings" />
-        </header>
+        </header> -->
         <!-- <h1>A Document Extraction App</h1>
         <h2>TO DO: Create a static version from figma design</h2> -->
-        <main>
+        <header class="app-header">
+            <div class="header-left">
+                <img class="logo" src="./assets/logo.png" alt="Stryker logo" />
+                <span class="v-divider" aria-hidden="true"></span>
+                <span class="app-title">AI DATA EXTRACTION TOOL</span>
+            </div>
+
+            <div class="header-right">
+                <div class="credits" aria-label="Credits">
+                    <span class="credits-value">99</span>
+                    <span class="credits-label">Credits</span>
+                </div>
+
+                <button class="user-btn" aria-label="Account & settings">
+                    <img src="./assets/user.png" alt="" />
+                </button>
+            </div>
+        </header>
+        <!-- <main>
             <img src="./assets/Frame 6.png" alt="LLM Model" />
             <img src="./assets/Drag.png" alt="Drag" />
             <div>
                 <img src="./assets/Invoice.png" alt="Invoice" />
                 <img src="./assets/Frame 11.png" alt="Extracted Fields" />
             </div>
+        </main> -->
+        <main class="uploader-row">
+            <!-- Model picker -->
+            <div class="model-cell">
+                <label for="llmModel" class="model-label">LLM</label>
+                <select id="llmModel" class="model-select" aria-label="LLM model">
+                    <option>ChatGPT 5</option>
+                    <option>ChatGPT 4.1</option>
+                    <option>Claude 3.5 Sonnet</option>
+                    <option>Gemini 1.5 Pro</option>
+                </select>
+            </div>
+
+            <!-- Drag & drop area -->
+            <form class="dropzone" id="dropzone" aria-label="Invoice upload">
+                <input
+                    id="fileInput"
+                    class="file-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    multiple
+                    aria-hidden="true"
+                    tabindex="-1" />
+                <div class="dropzone-content">
+                    <!-- upload icon (inline SVG so no asset needed) -->
+                    <svg
+                        class="upload-icon"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path
+                            d="M12 3l4 4h-3v6h-2V7H8l4-4zm-7 14v2h14v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2h2z"
+                            fill="currentColor" />
+                    </svg>
+                    <p class="dropzone-text">
+                        <strong>Drag</strong> your <b>PDF, JPG</b> or <b>PNG</b> invoices here
+                    </p>
+                    <button type="button" class="browse-btn" id="browseBtn">Browse files</button>
+                </div>
+            </form>
+            <!-- Preview card (appears after a file is picked/dropped) -->
+            <section class="preview" id="preview" hidden>
+                <div class="preview-inner">
+                    <img id="previewImg" alt="" />
+                    <div class="pdf-fallback" id="pdfFallback" hidden>PDF</div>
+
+                    <!-- progress -->
+                    <div class="progress-wrap" id="progressWrap" aria-hidden="true">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+
+                    <!-- action -->
+                    <button class="extract-btn" id="extractBtn" type="button" hidden>
+                        Extract Information
+                    </button>
+                </div>
+            </section>
+            <!-- Extraction panel (hidden until user clicks "Extract Information") -->
+            <section class="extraction" id="extraction" hidden>
+                <div class="extraction-grid">
+                    <!-- Left: static thumbnail of the uploaded file -->
+                    <div class="extract-thumb">
+                        <img id="extractThumbImg" alt="Uploaded invoice preview" />
+                        <div id="extractThumbPdf" class="pdf-fallback" hidden>PDF</div>
+
+                        <button class="save-btn" type="button" id="saveExcelBtn">
+                            Save to Excel
+                        </button>
+                    </div>
+
+                    <!-- Right: editable fields -->
+                    <form class="extract-form" id="extractForm">
+                        <div class="field">
+                            <label for="soNumber">NUMBER</label>
+                            <input id="soNumber" name="number" type="text" placeholder="12345" />
+                        </div>
+                        <div class="field">
+                            <label for="soDate">DATE</label>
+                            <input id="soDate" name="date" type="text" placeholder="06/16/2025" />
+                        </div>
+                        <div class="field">
+                            <label for="vendor">VENDOR</label>
+                            <input
+                                id="vendor"
+                                name="vendor"
+                                type="text"
+                                placeholder="Samira Hadid" />
+                        </div>
+                        <div class="field">
+                            <label for="address">ADDRESS</label>
+                            <input
+                                id="address"
+                                name="address"
+                                type="text"
+                                placeholder="123 Anywhere St., Any City, ST 12345" />
+                        </div>
+
+                        <!-- Items (simple 2-line example to match your mock) -->
+                        <div class="field">
+                            <label for="item1">ITEM 1</label>
+                            <input
+                                id="item1"
+                                name="item1"
+                                type="text"
+                                placeholder="Eggshell Camisole Top" />
+                        </div>
+                        <div class="row-3">
+                            <div class="field">
+                                <label for="item1Qty">ITEM 1 QUANTITY</label>
+                                <input id="item1Qty" name="item1Qty" type="text" placeholder="1" />
+                            </div>
+                            <div class="field">
+                                <label for="item1Price">ITEM 1 PRICE</label>
+                                <input
+                                    id="item1Price"
+                                    name="item1Price"
+                                    type="text"
+                                    placeholder="123" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="item2">ITEM 2</label>
+                            <input
+                                id="item2"
+                                name="item2"
+                                type="text"
+                                placeholder="Eggshell Camisole Top" />
+                        </div>
+                        <div class="row-3">
+                            <div class="field">
+                                <label for="item2Qty">ITEM 2 QUANTITY</label>
+                                <input id="item2Qty" name="item2Qty" type="text" placeholder="2" />
+                            </div>
+                            <div class="field">
+                                <label for="item2Price">ITEM 2 PRICE</label>
+                                <input
+                                    id="item2Price"
+                                    name="item2Price"
+                                    type="text"
+                                    placeholder="123" />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
         </main>
+
+        <!-- Optional: show picked files -->
+        <section class="file-list" id="fileList" aria-live="polite"></section>
+
+        <script>
+            // ----- elements -----
+            const dz = document.getElementById('dropzone');
+            const input = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const fileList = document.getElementById('fileList');
+
+            const preview = document.getElementById('preview');
+            const previewImg = document.getElementById('previewImg');
+            const pdfFallback = document.getElementById('pdfFallback');
+            const progressWrap = document.getElementById('progressWrap');
+            const progressBar = document.getElementById('progressBar');
+            const extractBtn = document.getElementById('extractBtn');
+
+            // ----- helpers -----
+            function showFilesList(files) {
+                if (!files?.length) return;
+                const items = [...files]
+                    .map((f) => `<li title="${f.name}">${f.name}</li>`)
+                    .join('');
+                fileList.innerHTML = `<ul>${items}</ul>`;
+            }
+
+            function showPreviewFor(file) {
+                preview.hidden = false;
+                extractBtn.hidden = true; // hide until upload finishes
+                progressWrap.removeAttribute('aria-hidden');
+                progressBar.style.width = '0%';
+
+                const isImage = file.type.startsWith('image/');
+                const isPdf = file.type === 'application/pdf';
+
+                if (isImage) {
+                    pdfFallback.hidden = true;
+                    previewImg.hidden = false;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        previewImg.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else if (isPdf) {
+                    previewImg.hidden = true;
+                    previewImg.src = '';
+                    pdfFallback.hidden = false;
+                } else {
+                    // Unknown: show generic area
+                    previewImg.hidden = true;
+                    previewImg.src = '';
+                    pdfFallback.hidden = false;
+                    pdfFallback.textContent = file.type ? file.type : 'FILE';
+                }
+            }
+
+            // Simulated upload (for demo). Replace with real upload below if ready.
+            async function simulateUpload(file) {
+                return new Promise((resolve) => {
+                    let p = 0;
+                    const timer = setInterval(() => {
+                        p = Math.min(100, p + Math.random() * 18 + 6);
+                        progressBar.style.width = p.toFixed(0) + '%';
+                        if (p >= 100) {
+                            clearInterval(timer);
+                            resolve();
+                        }
+                    }, 140);
+                });
+            }
+
+            // Real upload with progress (uncomment & adapt to use):
+            /*
+  function uploadWithProgress(file) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('file', file);
+
+      xhr.open('POST', '/api/upload'); // <-- your Flask endpoint
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = (e.loaded / e.total) * 100;
+          progressBar.style.width = percent.toFixed(0) + '%';
+        }
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.response) : reject(xhr.statusText);
+      xhr.onerror = () => reject('Network error');
+      xhr.send(form);
+    });
+  }
+  */
+
+            async function handleFiles(files) {
+                if (!files?.length) return;
+                const file = files[0];
+                showFilesList(files);
+                showPreviewFor(file);
+
+                // await uploadWithProgress(file); // <-- real upload
+                await simulateUpload(file); // demo upload
+
+                // Upload done: reveal the action button
+                extractBtn.hidden = false;
+                progressWrap.setAttribute('aria-hidden', 'true');
+            }
+
+            // ----- wire up events -----
+            browseBtn.addEventListener('click', () => input.click());
+            dz.addEventListener('click', (e) => {
+                if (!(e.target instanceof HTMLButtonElement)) input.click();
+            });
+
+            input.addEventListener('change', () => handleFiles(input.files));
+
+            ['dragenter', 'dragover'].forEach((evt) =>
+                dz.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dz.classList.add('is-dragover');
+                })
+            );
+            ['dragleave', 'drop'].forEach((evt) =>
+                dz.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dz.classList.remove('is-dragover');
+                })
+            );
+
+            dz.addEventListener('drop', (e) => {
+                const files = e.dataTransfer?.files;
+                if (files?.length) handleFiles(files);
+            });
+
+            // Action: Extract
+            extractBtn.addEventListener('click', async () => {
+                extractBtn.disabled = true;
+                extractBtn.textContent = 'Extracting…';
+                try {
+                    // Call your backend extraction API here
+                    // const res = await fetch('/api/extract', { method: 'POST', body: JSON.stringify({ jobId }) });
+                    // const data = await res.json();
+                    // TODO: navigate/update UI with extracted fields
+                } finally {
+                    extractBtn.disabled = false;
+                    extractBtn.textContent = 'Extract Information';
+                }
+            });
+
+            const extraction = document.getElementById('extraction');
+            const extractThumbImg = document.getElementById('extractThumbImg');
+            const extractThumbPdf = document.getElementById('extractThumbPdf');
+
+            // Keep the last selected file for the extraction panel thumbnail
+            let lastPickedFile = null;
+
+            function rememberPickedFile(file) {
+                lastPickedFile = file;
+            }
+
+            function populatePlaceholders() {
+                // You can replace these with values returned from your backend
+                document.getElementById('soNumber').value = '12345';
+                document.getElementById('soDate').value = '06/16/2025';
+                document.getElementById('vendor').value = 'Samira Hadid';
+                document.getElementById('address').value = '123 Anywhere St., Any City, ST 12345';
+
+                document.getElementById('item1').value = 'Eggshell Camisole Top';
+                document.getElementById('item1Qty').value = '1';
+                document.getElementById('item1Price').value = '123';
+
+                document.getElementById('item2').value = 'Eggshell Camisole Top';
+                document.getElementById('item2Qty').value = '2';
+                document.getElementById('item2Price').value = '123';
+            }
+
+            async function handleFiles(files) {
+                if (!files?.length) return;
+                const file = files[0];
+                rememberPickedFile(file);
+                showFilesList(files);
+                showPreviewFor(file);
+
+                // await uploadWithProgress(file); // real upload
+                await simulateUpload(file); // demo upload
+
+                extractBtn.hidden = false;
+                progressWrap.setAttribute('aria-hidden', 'true');
+            }
+
+            extractBtn.addEventListener('click', async () => {
+                // 1) Hide preview thumbnail + button
+                preview.hidden = true; // hides the whole preview section
+                extractBtn.hidden = true;
+
+                // 2) (Optional) call your backend for extraction results here
+                // const res = await fetch('/api/extract', { method:'POST', body: JSON.stringify({ fileId }) });
+                // const data = await res.json();
+
+                // 3) Show extraction panel and fill with placeholders (or data from API)
+                extraction.hidden = false;
+                populatePlaceholders();
+
+                // 4) Carry over a thumbnail
+                if (lastPickedFile) {
+                    if (lastPickedFile.type.startsWith('image/')) {
+                        extractThumbPdf.hidden = true;
+                        extractThumbImg.hidden = false;
+                        const r = new FileReader();
+                        r.onload = (e) => (extractThumbImg.src = e.target.result);
+                        r.readAsDataURL(lastPickedFile);
+                    } else if (lastPickedFile.type === 'application/pdf') {
+                        extractThumbImg.hidden = true;
+                        extractThumbImg.src = '';
+                        extractThumbPdf.hidden = false;
+                    } else {
+                        extractThumbImg.hidden = true;
+                        extractThumbImg.src = '';
+                        extractThumbPdf.hidden = false;
+                        extractThumbPdf.textContent = lastPickedFile.type
+                            ? lastPickedFile.type
+                            : 'FILE';
+                    }
+                }
+            });
+
+            // Save to Excel (placeholder)
+            document.getElementById('saveExcelBtn').addEventListener('click', async () => {
+                // Collect values if needed:
+                const form = document.getElementById('extractForm');
+                const formData = new FormData(form);
+                // Example: send to backend that writes an .xlsx and responds with a URL
+                // const res = await fetch('/api/save-excel', { method: 'POST', body: formData });
+                // const { url } = await res.json();
+                // window.location.href = url; // download
+                alert('Pretend we saved to Excel ✅');
+            });
+        </script>
     </body>
 </html>
