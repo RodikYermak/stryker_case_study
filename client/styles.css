@@ -1,0 +1,17 @@
+:root {
+    --font-primary: 'Nunito', sans-serif;
+    /* --font-primary: 'Times New Roman', Times, serif; */
+    --brand-color: #ffb503;
+    --text-color: #000000;
+    --underscore-color: #d7d3d3;
+    --border-color: #aebec0;
+    --labels-color: #5e6a6b;
+    --background-color: #ffffff;
+}
+
+/* body {
+    background-color: var(--primary-color);
+} */
+* {
+    font-family: var(--font-primary);
+}
