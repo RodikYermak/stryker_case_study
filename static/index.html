@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Stryker</title>
+
+        <!-- Fonts & Styles -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap"
+            rel="stylesheet" />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <!-- Header -->
+        <header class="app-header">
+            <div class="container header-wrap">
+                <div class="header-left">
+                    <img class="logo" src="./assets/logo.png" alt="Stryker logo" />
+                    <span class="v-divider" aria-hidden="true"></span>
+                    <span class="app-title">AI DATA EXTRACTION TOOL</span>
+                </div>
+
+                <div class="header-right">
+                    <div class="credits" aria-label="Credits">
+                        <span class="credits-value">99</span>
+                        <span class="credits-label">Credits</span>
+                    </div>
+                    <button class="user-btn" aria-label="Account &amp; settings">
+                        <img src="./assets/user.png" alt="" />
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main -->
+        <main class="container main-wrap">
+            <!-- Model picker -->
+            <section class="model-cell">
+                <label for="llmModel" class="sr-only">LLM</label>
+                <select id="llmModel" class="model-select" aria-label="LLM model">
+                    <option>ChatGPT 5</option>
+                    <option>ChatGPT 4.1</option>
+                    <option>Claude 3.5 Sonnet</option>
+                    <option>Gemini 1.5 Pro</option>
+                </select>
+            </section>
+
+            <!-- Drag & drop -->
+            <form class="dropzone" id="dropzone" aria-label="Invoice upload">
+                <input
+                    id="fileInput"
+                    class="file-input"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    multiple />
+                <div class="dropzone-content">
+                    <svg
+                        class="upload-icon"
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path
+                            d="M12 3l4 4h-3v6h-2V7H8l4-4zm-7 14v2h14v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2h2z"
+                            fill="currentColor" />
+                    </svg>
+                    <p class="dropzone-text">
+                        <strong>Drag</strong> your <b>PDF, JPG</b> or <b>PNG</b> invoices here
+                    </p>
+                    <button type="button" class="btn btn-ghost" id="browseBtn">Browse files</button>
+                </div>
+            </form>
+
+            <!-- Preview (shown during upload) -->
+            <section class="preview" id="preview" hidden>
+                <div class="preview-inner">
+                    <img id="previewImg" alt="" />
+                    <div class="pdf-fallback" id="pdfFallback" hidden>PDF</div>
+
+                    <div class="progress-wrap" id="progressWrap" aria-hidden="true">
+                        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                    </div>
+
+                    <button class="btn btn-brand" id="extractBtn" type="button" hidden>
+                        Extract Information
+                    </button>
+                </div>
+            </section>
+
+            <!-- Extraction panel (after extract) -->
+            <section class="extraction" id="extraction" hidden>
+                <div class="extraction-grid">
+                    <aside class="extract-thumb">
+                        <img id="extractThumbImg" alt="Uploaded invoice preview" />
+                        <div id="extractThumbPdf" class="pdf-fallback" hidden>PDF</div>
+
+                        <button class="btn btn-brand" type="button" id="saveExcelBtn">
+                            Save to Excel
+                        </button>
+                    </aside>
+
+                    <form class="extract-form" id="extractForm" autocomplete="off">
+                        <div class="field">
+                            <label for="soNumber">NUMBER</label>
+                            <input id="soNumber" name="number" type="text" placeholder="12345" />
+                        </div>
+                        <div class="field">
+                            <label for="soDate">DATE</label>
+                            <input id="soDate" name="date" type="text" placeholder="06/16/2025" />
+                        </div>
+                        <div class="field">
+                            <label for="vendor">VENDOR</label>
+                            <input
+                                id="vendor"
+                                name="vendor"
+                                type="text"
+                                placeholder="Samira Hadid" />
+                        </div>
+                        <div class="field">
+                            <label for="address">ADDRESS</label>
+                            <input
+                                id="address"
+                                name="address"
+                                type="text"
+                                placeholder="123 Anywhere St., Any City, ST 12345" />
+                        </div>
+
+                        <div class="field">
+                            <label for="item1">ITEM 1</label>
+                            <input
+                                id="item1"
+                                name="item1"
+                                type="text"
+                                placeholder="Eggshell Camisole Top" />
+                        </div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label for="item1Qty">ITEM 1 QUANTITY</label>
+                                <input id="item1Qty" name="item1Qty" type="text" placeholder="1" />
+                            </div>
+                            <div class="field">
+                                <label for="item1Price">ITEM 1 PRICE</label>
+                                <input
+                                    id="item1Price"
+                                    name="item1Price"
+                                    type="text"
+                                    placeholder="123" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="item2">ITEM 2</label>
+                            <input
+                                id="item2"
+                                name="item2"
+                                type="text"
+                                placeholder="Eggshell Camisole Top" />
+                        </div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label for="item2Qty">ITEM 2 QUANTITY</label>
+                                <input id="item2Qty" name="item2Qty" type="text" placeholder="2" />
+                            </div>
+                            <div class="field">
+                                <label for="item2Price">ITEM 2 PRICE</label>
+                                <input
+                                    id="item2Price"
+                                    name="item2Price"
+                                    type="text"
+                                    placeholder="123" />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- (Optional) picked files list -->
+            <section class="file-list" id="fileList" aria-live="polite"></section>
+        </main>
+
+        <script src="app.js" defer></script>
+    </body>
+</html>
