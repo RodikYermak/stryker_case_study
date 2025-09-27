@@ -1,16 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import UserInterface from '@/components/UserInterface';
 
-function Index() {
-    const [message, setMessage] = useState('Loading');
-    useEffect(() => {
-        fetch('http://localhost:8080/')
-            .then((response) => response.json())
-            .then((data) => {
-                // console.log(data);
-                setMessage(data.message);
-            });
-    }, []);
-    return <div>{message}</div>;
-}
+const Home: React.FC = () => {
+    return (
+        <div>
+            <UserInterface backendName="flask" />
+        </div>
+    );
+};
 
-export default Index;
+export default Home;
