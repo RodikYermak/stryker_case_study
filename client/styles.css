@@ -77,7 +77,7 @@ input {
     width: auto;
 }
 .v-divider {
-    width: 1px;
+    width: 2px;
     height: 24px;
     background: var(--brand-color);
     border-radius: 1px;
