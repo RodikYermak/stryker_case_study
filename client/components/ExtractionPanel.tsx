@@ -40,6 +40,8 @@ type Props = {
     file: File | null;
     visible: boolean;
     apiBase?: string; // default http://localhost:4000
+    initialInvoice?: Invoice;
+    onSaved?: () => void; // <-- notify parent after successful DB save
 };
 
 function normalizeInvoice(inv: Partial<Invoice> | null | undefined): Invoice {
@@ -113,29 +115,54 @@ function Field(props: {
     );
 }
 
-export default function ExtractionPanel({ file, visible, apiBase }: Props) {
+export default function ExtractionPanel({
+    file,
+    visible,
+    apiBase,
+    initialInvoice,
+    onSaved,
+}: Props) {
     const base = apiBase ?? 'http://localhost:4000';
     const [thumb, setThumb] = useState<string>('');
-    const [invoice, setInvoice] = useState<Invoice>(EMPTY_INVOICE);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [invoice, setInvoice] = useState<Invoice>(initialInvoice ?? EMPTY_INVOICE);
     const [saving, setSaving] = useState(false);
     const [saveMsg, setSaveMsg] = useState<string | null>(null);
-    const [extracting, setExtracting] = useState(false);
-    const [extractMsg, setExtractMsg] = useState<string | null>(null);
 
-    // Preview logic
+    // seed from extractor
+    useEffect(() => {
+        if (initialInvoice) setInvoice(initialInvoice);
+    }, [initialInvoice]);
+
+    // handle preview
     useEffect(() => {
         if (!file) {
             setThumb('');
-            setInvoice(EMPTY_INVOICE);
+            if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+            setPdfUrl(null);
             return;
         }
         if (file.type.startsWith('image/')) {
             const r = new FileReader();
             r.onload = (e) => setThumb(String(e.target?.result || ''));
             r.readAsDataURL(file);
+            if (pdfUrl) {
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        } else if (file.type === 'application/pdf') {
+            const url = URL.createObjectURL(file);
+            setPdfUrl(url);
+            setThumb('');
+            return () => URL.revokeObjectURL(url);
         } else {
             setThumb('');
+            if (pdfUrl) {
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [file]);
 
     const isPdf = !!file && file.type === 'application/pdf';
@@ -175,46 +202,12 @@ export default function ExtractionPanel({ file, visible, apiBase }: Props) {
         [invoice.subtotal, invoice.tax, invoice.total]
     );
 
-    /** ---- NEW: call backend extractor with the uploaded file ---- */
-    const extractFromFile = async () => {
-        if (!file) {
-            setExtractMsg('No file selected.');
-            return;
-        }
-        setExtracting(true);
-        setExtractMsg(null);
-        try {
-            const form = new FormData();
-            form.append('file', file);
-
-            const res = await fetch(`${base}/api/flask/invoices/extract`, {
-                method: 'POST',
-                body: form,
-            });
-
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({} as any));
-                throw new Error(err?.message || `Extractor HTTP ${res.status}`);
-            }
-
-            const data = await res.json();
-            setInvoice(normalizeInvoice(data));
-            setExtractMsg('Extracted ✅ — review fields, then Save to DB.');
-        } catch (e: any) {
-            console.error('Extract failed:', e);
-            setExtractMsg(`Extract failed: ${e.message || e.toString()}`);
-        } finally {
-            setExtracting(false);
-        }
-    };
-
-    /** Save: ALWAYS POST (create new invoice) */
+    /** Save: POST and hide panel */
     const saveInvoice = async () => {
         setSaving(true);
         setSaveMsg(null);
         try {
             const payload = toApiPayload(invoice);
-
             if (!payload.vendor_name || !payload.invoice_number) {
                 setSaveMsg('vendor_name and invoice_number are required.');
                 setSaving(false);
@@ -234,7 +227,9 @@ export default function ExtractionPanel({ file, visible, apiBase }: Props) {
 
             const saved = await res.json();
             setInvoice((prev) => normalizeInvoice({ ...prev, ...saved }));
-            setSaveMsg('Invoice saved ✅');
+
+            // Immediately notify parent
+            onSaved?.();
         } catch (e: any) {
             console.error('Save failed:', e);
             setSaveMsg(`Save failed: ${e.message || e.toString()}`);
@@ -250,35 +245,22 @@ export default function ExtractionPanel({ file, visible, apiBase }: Props) {
             <div className="extraction-grid">
                 <aside className="extract-thumb">
                     {isPdf ? (
-                        <div className="pdf-fallback" id="extractThumbPdf">
-                            PDF
-                        </div>
+                        <iframe
+                            src={(pdfUrl ?? '') + '#toolbar=0&navpanes=0&scrollbar=0'}
+                            width={300}
+                            height={360}
+                            style={{ border: '1px solid #ddd', borderRadius: 4 }}
+                            title="PDF preview"
+                        />
                     ) : (
                         <Image
                             src={thumb || '/images/placeholder.png'}
                             alt="Uploaded invoice preview"
-                            width={260}
+                            width={300}
                             height={360}
                         />
                     )}
 
-                    {/* NEW: Extract with AI */}
-                    <button
-                        className="btn"
-                        type="button"
-                        disabled={!file || extracting}
-                        onClick={extractFromFile}
-                        title="Extract fields from uploaded file"
-                        style={{ marginBottom: 8 }}>
-                        {extracting ? 'Extracting…' : 'Extract with AI'}
-                    </button>
-                    {extractMsg && (
-                        <div role="status" style={{ marginBottom: 8, opacity: 0.8 }}>
-                            {extractMsg}
-                        </div>
-                    )}
-
-                    {/* Save to DB */}
                     <button
                         className="btn btn-brand"
                         type="button"
@@ -298,7 +280,6 @@ export default function ExtractionPanel({ file, visible, apiBase }: Props) {
                     className="extract-form"
                     autoComplete="off"
                     onSubmit={(e) => e.preventDefault()}>
-                    {/* Top-level invoice fields */}
                     <Field
                         label="VENDOR NAME"
                         id="vendor_name"
