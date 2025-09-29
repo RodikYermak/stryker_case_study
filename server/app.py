@@ -157,6 +157,8 @@
 
 # app.py
 import os
+# from dotenv import load_dotenv
+# load_dotenv()
 from flask import Flask, request, jsonify, make_response, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -168,6 +170,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
+import base64
 
 def _parse_date(s: str | None):
     if not s:
@@ -205,7 +208,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
 db = SQLAlchemy(app)
 
+client = OpenAI() # will use env OPENAI_API_KEY
+
 EXTRACTION_PROMPT = """You are a financial assistant that extracts structured data from invoices.
+
 Extract the following fields from the text:
 - vendor_name
 - invoice_number
@@ -215,8 +221,77 @@ Extract the following fields from the text:
 - subtotal
 - tax
 - total
-Always respond with valid JSON only, no extra text.
+Output STRICT JSON only, no commentary.
 """
+
+def _extract_text_from_pdf(file_storage):
+    try:
+        reader = PyPDF2.PdfReader(file_storage)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            text += page_text + "\n"
+        return text.strip()
+    except Exception:
+        return ""
+
+@app.post("/api/flask/invoices/extract")
+def extract_invoice_from_file():
+    """
+    Accepts multipart/form-data with 'file'.
+    For PDFs: extracts text, sends to OpenAI to get structured JSON.
+    Returns JSON dict suitable for your Invoice form.
+    """
+    try:
+        f = request.files.get("file")
+        if not f:
+            return jsonify({"message": "No file uploaded. Use 'file' field."}), 400
+
+        # Handle PDFs (recommended path)
+        text = ""
+        if f.mimetype == "application/pdf" or (f.filename or "").lower().endswith(".pdf"):
+            text = _extract_text_from_pdf(f)
+            if not text:
+                return jsonify({"message": "Could not read text from PDF"}), 415
+        else:
+            # You can add image OCR here if you want (e.g., Tesseract or OpenAI Vision).
+            return jsonify({"message": "Only PDF invoices supported for extraction at this time"}), 415
+
+        # Call OpenAI to transform raw text -> structured JSON
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": EXTRACTION_PROMPT},
+                {"role": "user", "content": text[:100_000]},  # keep request reasonable
+            ],
+            temperature=0,
+        )
+
+        raw = completion.choices[0].message.content or "{}"
+
+        # Try parse; if it fails, wrap as error
+        try:
+            data = json.loads(raw)
+        except Exception as e:
+            return jsonify({"message": "Failed to parse extraction JSON", "raw": raw, "error": str(e)}), 502
+
+        # Normalize for your form (strings for money/date are fine; server will coerce on save)
+        normalized = {
+            "id": None,
+            "vendor_name": (data.get("vendor_name") or "").strip(),
+            "invoice_number": (data.get("invoice_number") or "").strip(),
+            "invoice_date": data.get("invoice_date") or None,  # "YYYY-MM-DD" or "MM/DD/YYYY" OK
+            "due_date": data.get("due_date") or None,
+            "line_items": data.get("line_items") if isinstance(data.get("line_items"), list) else [],
+            "subtotal": str(data.get("subtotal")) if data.get("subtotal") is not None else "",
+            "tax": str(data.get("tax")) if data.get("tax") is not None else "",
+            "total": str(data.get("total")) if data.get("total") is not None else "",
+        }
+
+        return jsonify(normalized), 200
+
+    except Exception as e:
+        return make_response(jsonify({"message": "error extracting invoice", "error": str(e)}), 500)
 
 # --- Models ---
 class User(db.Model):
