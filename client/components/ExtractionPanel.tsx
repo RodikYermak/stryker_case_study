@@ -1,43 +1,134 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-type FormState = {
-    number: string;
-    date: string;
-    vendor: string;
-    address: string;
-    item1: string;
-    item1Qty: string;
-    item1Price: string;
-    item2: string;
-    item2Qty: string;
-    item2Price: string;
+/* ---------- Types that mirror Flask to_dict() ---------- */
+type LineItem = {
+    description: string;
+    quantity: number | string;
+    unit_price: number | string;
+    total: number | string;
 };
 
-const DEFAULTS: FormState = {
-    number: '12345',
-    date: '06/16/2025',
-    vendor: 'Samira Hadid',
-    address: '123 Anywhere St., Any City, ST 12345',
-    item1: 'Eggshell Camisole Top',
-    item1Qty: '1',
-    item1Price: '123',
-    item2: 'Eggshell Camisole Top',
-    item2Qty: '2',
-    item2Price: '123',
+export type Invoice = {
+    id: number | null;
+    vendor_name: string;
+    invoice_number: string;
+    invoice_date: string | null;
+    due_date: string | null;
+    line_items: LineItem[];
+    subtotal: string | null;
+    tax: string | null;
+    total: string | null;
+};
+
+const EMPTY_INVOICE: Invoice = {
+    id: null,
+    vendor_name: '',
+    invoice_number: '',
+    invoice_date: null,
+    due_date: null,
+    line_items: [
+        { description: '', quantity: '', unit_price: '', total: '' },
+        { description: '', quantity: '', unit_price: '', total: '' },
+    ],
+    subtotal: '',
+    tax: '',
+    total: '',
 };
 
 type Props = {
     file: File | null;
     visible: boolean;
+    apiBase?: string; // default http://localhost:4000
 };
 
-export default function ExtractionPanel({ file, visible }: Props) {
-    const [thumb, setThumb] = useState<string>('');
-    const [form, setForm] = useState<FormState>(DEFAULTS);
+function normalizeInvoice(inv: Partial<Invoice> | null | undefined): Invoice {
+    const safe = inv ?? {};
+    const items = Array.isArray(safe.line_items) ? safe.line_items : [];
+    return {
+        id: safe.id ?? null,
+        vendor_name: safe.vendor_name ?? '',
+        invoice_number: safe.invoice_number ?? '',
+        invoice_date: safe.invoice_date ?? null,
+        due_date: safe.due_date ?? null,
+        line_items: items.map((it: any) => ({
+            description: String(it?.description ?? ''),
+            quantity: it?.quantity ?? '',
+            unit_price: it?.unit_price ?? '',
+            total: it?.total ?? '',
+        })),
+        subtotal: safe.subtotal ?? '',
+        tax: safe.tax ?? '',
+        total: safe.total ?? '',
+    };
+}
 
+function toApiPayload(invoice: Invoice) {
+    const normDate = (s: string | null) => (s && s.trim() !== '' ? s : null);
+    const num = (v: any) => {
+        if (v === '' || v === null || v === undefined) return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+    };
+
+    return {
+        vendor_name: invoice.vendor_name?.trim() || '',
+        invoice_number: invoice.invoice_number?.trim() || '',
+        invoice_date: normDate(invoice.invoice_date ?? null),
+        due_date: normDate(invoice.due_date ?? null),
+        line_items: (invoice.line_items || []).map((it) => ({
+            description: (it.description ?? '').toString(),
+            quantity: num(it.quantity),
+            unit_price: num(it.unit_price),
+            total: num(it.total),
+        })),
+        subtotal: num(invoice.subtotal),
+        tax: num(invoice.tax),
+        total: num(invoice.total),
+    };
+}
+
+/** Small controlled input helper */
+function Field(props: {
+    label: string;
+    id: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    type?: 'text' | 'date' | 'number';
+}) {
+    const { label, id, value, onChange, placeholder, type = 'text' } = props;
+    return (
+        <div className="field">
+            <label htmlFor={id}>{label}</label>
+            <input
+                id={id}
+                name={id}
+                type={type}
+                placeholder={placeholder}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            />
+        </div>
+    );
+}
+
+export default function ExtractionPanel({ file, visible, apiBase }: Props) {
+    const base = apiBase ?? 'http://localhost:4000';
+    const [thumb, setThumb] = useState<string>('');
+    const [invoice, setInvoice] = useState<Invoice>(EMPTY_INVOICE);
+    const [saving, setSaving] = useState(false);
+    const [saveMsg, setSaveMsg] = useState<string | null>(null);
+    const [extracting, setExtracting] = useState(false);
+    const [extractMsg, setExtractMsg] = useState<string | null>(null);
+
+    // Preview logic
     useEffect(() => {
-        if (!file) return setThumb('');
+        if (!file) {
+            setThumb('');
+            setInvoice(EMPTY_INVOICE);
+            return;
+        }
         if (file.type.startsWith('image/')) {
             const r = new FileReader();
             r.onload = (e) => setThumb(String(e.target?.result || ''));
@@ -45,12 +136,114 @@ export default function ExtractionPanel({ file, visible }: Props) {
         } else {
             setThumb('');
         }
-        setForm(DEFAULTS);
     }, [file]);
 
-    if (!visible) return null;
-
     const isPdf = !!file && file.type === 'application/pdf';
+
+    // Controlled input helpers
+    const updateField = (key: keyof Invoice, value: any) =>
+        setInvoice((inv) => ({ ...inv, [key]: value }));
+
+    const updateLineItem = (idx: number, key: keyof LineItem, value: any) =>
+        setInvoice((inv) => {
+            const items = inv.line_items.slice();
+            if (!items[idx]) return inv;
+            items[idx] = { ...items[idx], [key]: value };
+            return { ...inv, line_items: items };
+        });
+
+    const addLineItem = () =>
+        setInvoice((inv) => ({
+            ...inv,
+            line_items: [
+                ...inv.line_items,
+                { description: '', quantity: '', unit_price: '', total: '' },
+            ],
+        }));
+
+    const removeLineItem = (idx: number) =>
+        setInvoice((inv) => ({
+            ...inv,
+            line_items: inv.line_items.filter((_, i) => i !== idx),
+        }));
+
+    const totalsHint = useMemo(
+        () =>
+            `Subtotal: ${invoice.subtotal ?? ''}  |  Tax: ${invoice.tax ?? ''}  |  Total: ${
+                invoice.total ?? ''
+            }`,
+        [invoice.subtotal, invoice.tax, invoice.total]
+    );
+
+    /** ---- NEW: call backend extractor with the uploaded file ---- */
+    const extractFromFile = async () => {
+        if (!file) {
+            setExtractMsg('No file selected.');
+            return;
+        }
+        setExtracting(true);
+        setExtractMsg(null);
+        try {
+            const form = new FormData();
+            form.append('file', file);
+
+            const res = await fetch(`${base}/api/flask/invoices/extract`, {
+                method: 'POST',
+                body: form,
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({} as any));
+                throw new Error(err?.message || `Extractor HTTP ${res.status}`);
+            }
+
+            const data = await res.json();
+            setInvoice(normalizeInvoice(data));
+            setExtractMsg('Extracted ✅ — review fields, then Save to DB.');
+        } catch (e: any) {
+            console.error('Extract failed:', e);
+            setExtractMsg(`Extract failed: ${e.message || e.toString()}`);
+        } finally {
+            setExtracting(false);
+        }
+    };
+
+    /** Save: ALWAYS POST (create new invoice) */
+    const saveInvoice = async () => {
+        setSaving(true);
+        setSaveMsg(null);
+        try {
+            const payload = toApiPayload(invoice);
+
+            if (!payload.vendor_name || !payload.invoice_number) {
+                setSaveMsg('vendor_name and invoice_number are required.');
+                setSaving(false);
+                return;
+            }
+
+            const res = await fetch(`${base}/api/flask/invoices`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({} as any));
+                throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
+            }
+
+            const saved = await res.json();
+            setInvoice((prev) => normalizeInvoice({ ...prev, ...saved }));
+            setSaveMsg('Invoice saved ✅');
+        } catch (e: any) {
+            console.error('Save failed:', e);
+            setSaveMsg(`Save failed: ${e.message || e.toString()}`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!visible) return null;
 
     return (
         <section className="extraction">
@@ -68,124 +261,152 @@ export default function ExtractionPanel({ file, visible }: Props) {
                             height={360}
                         />
                     )}
+
+                    {/* NEW: Extract with AI */}
+                    <button
+                        className="btn"
+                        type="button"
+                        disabled={!file || extracting}
+                        onClick={extractFromFile}
+                        title="Extract fields from uploaded file"
+                        style={{ marginBottom: 8 }}>
+                        {extracting ? 'Extracting…' : 'Extract with AI'}
+                    </button>
+                    {extractMsg && (
+                        <div role="status" style={{ marginBottom: 8, opacity: 0.8 }}>
+                            {extractMsg}
+                        </div>
+                    )}
+
+                    {/* Save to DB */}
                     <button
                         className="btn btn-brand"
                         type="button"
-                        onClick={() => alert('Pretend we saved to Excel ✅')}>
-                        Save to Excel
+                        disabled={saving}
+                        onClick={saveInvoice}
+                        title="Save invoice to DB">
+                        {saving ? 'Saving…' : 'Save to DB'}
                     </button>
+                    {saveMsg && (
+                        <div role="status" style={{ marginTop: 8, opacity: 0.8 }}>
+                            {saveMsg}
+                        </div>
+                    )}
                 </aside>
 
                 <form
                     className="extract-form"
                     autoComplete="off"
                     onSubmit={(e) => e.preventDefault()}>
-                    {[
-                        ['NUMBER', 'number', '12345'],
-                        ['DATE', 'date', '06/16/2025'],
-                        ['VENDOR', 'vendor', 'Samira Hadid'],
-                        ['ADDRESS', 'address', '123 Anywhere St., Any City, ST 12345'],
-                    ].map(([label, name, ph]) => (
-                        <div className="field" key={name}>
-                            <label htmlFor={name}>{label}</label>
-                            <input
-                                id={name}
-                                name={name}
-                                type="text"
-                                placeholder={String(ph)}
-                                // value={(form as any)[name]}
-                                value={form.number}
-                                onChange={(e) =>
-                                    setForm((f) => ({
-                                        ...f,
-                                        [name as keyof FormState]: e.target.value,
-                                    }))
-                                }
+                    {/* Top-level invoice fields */}
+                    <Field
+                        label="VENDOR NAME"
+                        id="vendor_name"
+                        value={invoice.vendor_name}
+                        onChange={(v) => updateField('vendor_name', v)}
+                        placeholder="Acme Corp"
+                    />
+                    <Field
+                        label="INVOICE NUMBER"
+                        id="invoice_number"
+                        value={invoice.invoice_number}
+                        onChange={(v) => updateField('invoice_number', v)}
+                        placeholder="INV-1001"
+                    />
+                    <Field
+                        label="INVOICE DATE"
+                        id="invoice_date"
+                        type="date"
+                        value={invoice.invoice_date ?? ''}
+                        onChange={(v) => updateField('invoice_date', v)}
+                        placeholder="YYYY-MM-DD"
+                    />
+                    <Field
+                        label="DUE DATE"
+                        id="due_date"
+                        type="date"
+                        value={invoice.due_date ?? ''}
+                        onChange={(v) => updateField('due_date', v)}
+                        placeholder="YYYY-MM-DD"
+                    />
+
+                    {/* Line Items */}
+                    <h4 style={{ marginTop: 16 }}>Line Items</h4>
+                    {invoice.line_items.map((it, idx) => (
+                        <div className="row-4" key={idx} style={{ gap: 8, alignItems: 'end' }}>
+                            <Field
+                                label="DESCRIPTION"
+                                id={`li_desc_${idx}`}
+                                value={String(it.description ?? '')}
+                                onChange={(v) => updateLineItem(idx, 'description', v)}
+                                placeholder="Widget A"
                             />
+                            <Field
+                                label="QTY"
+                                id={`li_qty_${idx}`}
+                                value={String(it.quantity ?? '')}
+                                onChange={(v) => updateLineItem(idx, 'quantity', v)}
+                                placeholder="1"
+                            />
+                            <Field
+                                label="UNIT PRICE"
+                                id={`li_unit_${idx}`}
+                                value={String(it.unit_price ?? '')}
+                                onChange={(v) => updateLineItem(idx, 'unit_price', v)}
+                                placeholder="19.99"
+                            />
+                            <Field
+                                label="TOTAL"
+                                id={`li_total_${idx}`}
+                                value={String(it.total ?? '')}
+                                onChange={(v) => updateLineItem(idx, 'total', v)}
+                                placeholder="19.99"
+                            />
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => removeLineItem(idx)}
+                                aria-label={`Remove line item ${idx + 1}`}>
+                                Remove
+                            </button>
                         </div>
                     ))}
+                    <button
+                        type="button"
+                        className="btn"
+                        onClick={addLineItem}
+                        style={{ marginTop: 8 }}>
+                        + Add Line Item
+                    </button>
 
-                    {/* Item 1 */}
-                    <div className="field">
-                        <label htmlFor="item1">ITEM 1</label>
-                        <input
-                            id="item1"
-                            name="item1"
-                            type="text"
-                            placeholder="Item name"
-                            value={form.item1}
-                            onChange={(e) => setForm((f) => ({ ...f, item1: e.target.value }))}
+                    {/* Totals */}
+                    <div className="row-3" style={{ marginTop: 16, gap: 8 }}>
+                        <Field
+                            label="SUBTOTAL"
+                            id="subtotal"
+                            value={invoice.subtotal ?? ''}
+                            onChange={(v) => updateField('subtotal', v)}
+                            placeholder="49.98"
+                        />
+                        <Field
+                            label="TAX"
+                            id="tax"
+                            value={invoice.tax ?? ''}
+                            onChange={(v) => updateField('tax', v)}
+                            placeholder="4.00"
+                        />
+                        <Field
+                            label="TOTAL"
+                            id="total"
+                            value={invoice.total ?? ''}
+                            onChange={(v) => updateField('total', v)}
+                            placeholder="53.98"
                         />
                     </div>
-                    <div className="row-2">
-                        <div className="field">
-                            <label htmlFor="item1Qty">ITEM 1 QUANTITY</label>
-                            <input
-                                id="item1Qty"
-                                name="item1Qty"
-                                type="text"
-                                placeholder="1"
-                                value={form.item1Qty}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, item1Qty: e.target.value }))
-                                }
-                            />
-                        </div>
-                        <div className="field">
-                            <label htmlFor="item1Price">ITEM 1 PRICE</label>
-                            <input
-                                id="item1Price"
-                                name="item1Price"
-                                type="text"
-                                placeholder="123"
-                                value={form.item1Price}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, item1Price: e.target.value }))
-                                }
-                            />
-                        </div>
-                    </div>
 
-                    {/* Item 2 */}
-                    <div className="field">
-                        <label htmlFor="item2">ITEM 2</label>
-                        <input
-                            id="item2"
-                            name="item2"
-                            type="text"
-                            placeholder="Item name"
-                            value={form.item2}
-                            onChange={(e) => setForm((f) => ({ ...f, item2: e.target.value }))}
-                        />
-                    </div>
-                    <div className="row-2">
-                        <div className="field">
-                            <label htmlFor="item2Qty">ITEM 2 QUANTITY</label>
-                            <input
-                                id="item2Qty"
-                                name="item2Qty"
-                                type="text"
-                                placeholder="2"
-                                value={form.item2Qty}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, item2Qty: e.target.value }))
-                                }
-                            />
-                        </div>
-                        <div className="field">
-                            <label htmlFor="item2Price">ITEM 2 PRICE</label>
-                            <input
-                                id="item2Price"
-                                name="item2Price"
-                                type="text"
-                                placeholder="123"
-                                value={form.item2Price}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, item2Price: e.target.value }))
-                                }
-                            />
-                        </div>
-                    </div>
+                    <small style={{ opacity: 0.75, display: 'block', marginTop: 8 }}>
+                        {totalsHint}
+                    </small>
                 </form>
             </div>
         </section>
