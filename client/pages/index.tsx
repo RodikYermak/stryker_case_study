@@ -18,6 +18,7 @@ import Dropzone from '@/components/Dropzone';
 import Preview from '@/components/Preview';
 import ExtractionPanel from '@/components/ExtractionPanel';
 import FileList from '@/components/FileList';
+import axios from 'axios';
 
 export default function Home() {
     const [model, setModel] = useState('ChatGPT 5');
@@ -25,6 +26,7 @@ export default function Home() {
     const [selected, setSelected] = useState<File | null>(null);
     const [progress, setProgress] = useState(0);
     const [phase, setPhase] = useState<'idle' | 'uploading' | 'ready' | 'extracted'>('idle');
+    const [users, setUsers] = useState([]);
 
     // demo upload simulator — replace with real network flow later
     useEffect(() => {
@@ -40,6 +42,20 @@ export default function Home() {
         }, 140);
         return () => clearInterval(t);
     }, [phase]);
+
+    // Fetch users
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await axios.get(`http://localhost:4000/api/flask/users`);
+                setUsers(response.data.reverse());
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const onFiles = (fl: FileList | File[]) => {
         const arr = Array.from(fl);
@@ -73,6 +89,11 @@ export default function Home() {
                     />
                     <ExtractionPanel file={selected} visible={phase === 'extracted'} />
                     {/* <FileList files={files} /> */}
+                    <div>
+                        {users.map((user) => (
+                            <div key={user.name}>{user.name}</div>
+                        ))}
+                    </div>
                 </div>
             </main>
         </>

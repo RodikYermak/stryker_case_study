@@ -163,7 +163,6 @@ from flask_cors import CORS
 import json
 import PyPDF2
 from openai import OpenAI
-from keys import OPENAI_API_KEY
 
 app = Flask(__name__)
 CORS(app)
@@ -180,7 +179,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
 db = SQLAlchemy(app)
-client = OpenAI(api_key=OPENAI_API_KEY)
 
 EXTRACTION_PROMPT = """You are a financial assistant that extracts structured data from invoices.
 Extract the following fields from the text:
@@ -194,14 +192,6 @@ Extract the following fields from the text:
 - total
 Always respond with valid JSON only, no extra text.
 """
-
-def extract_text_from_pdf(pdf_file):
-    reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in reader.pages:
-        page_text = page.extract_text() or ""
-        text += page_text + "\n"
-    return text
 
 # --- Models ---
 class User(db.Model):
@@ -218,28 +208,6 @@ with app.app_context():
     db.create_all()
 
 # --- Routes ---
-@app.route("/", methods=["GET", "POST"])
-def index():
-    extracted_data = None
-    raw_text = None
-    if request.method == "POST":
-        pdf_file = request.files.get("invoice")
-        if pdf_file:
-            raw_text = extract_text_from_pdf(pdf_file)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": EXTRACTION_PROMPT},
-                    {"role": "user", "content": raw_text},
-                ],
-                temperature=0
-            )
-            try:
-                extracted_data = json.loads(response.choices[0].message.content.strip())
-            except Exception as e:
-                extracted_data = {"error": f"Failed to parse JSON: {str(e)}"}
-    return render_template("index.html", data=extracted_data, text=raw_text)
-
 @app.get("/test")
 def test():
     return jsonify({"message": "The server is running"})
