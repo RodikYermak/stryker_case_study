@@ -86,7 +86,10 @@ export default function Home() {
         setExtracted(null);
     };
 
-    const showPreview = useMemo(() => phase === 'uploading' || phase === 'ready', [phase]);
+    const showPreview = useMemo(
+        () => !!selected && (phase === 'uploading' || phase === 'ready'),
+        [phase, selected]
+    );
 
     const fmtDate = (d?: string | null) => (d ? d : '');
     const fmtMoney = (n?: string | null) => (n ?? '') || '';
@@ -187,6 +190,12 @@ export default function Home() {
                         visible={phase === 'extracted'}
                         apiBase="http://localhost:4000"
                         initialInvoice={extracted ?? undefined}
+                        onSaved={async () => {
+                            await loadInvoices(); // refresh the table
+                            setPhase('idle'); // leave preview/extract flow
+                            setSelected(null); // 🔑 remove file -> hides Preview thumbnail/button
+                            setExtracted(null); // clear extracted data
+                        }}
                     />
 
                     {/* Invoices table (editable) */}
@@ -230,7 +239,6 @@ export default function Home() {
                                             return (
                                                 <tr key={inv.id}>
                                                     <td style={td}>{inv.id}</td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -248,7 +256,6 @@ export default function Home() {
                                                             inv.vendor_name
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -266,7 +273,6 @@ export default function Home() {
                                                             inv.invoice_number
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -285,7 +291,6 @@ export default function Home() {
                                                             fmtDate(inv.invoice_date)
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -304,7 +309,6 @@ export default function Home() {
                                                             fmtDate(inv.due_date)
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {inv.line_items?.length || 0}{' '}
                                                         {inv.line_items?.[0]?.description
@@ -313,7 +317,6 @@ export default function Home() {
                                                               )}`
                                                             : ''}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -331,7 +334,6 @@ export default function Home() {
                                                             fmtMoney(inv.subtotal)
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -347,7 +349,6 @@ export default function Home() {
                                                             fmtMoney(inv.tax)
                                                         )}
                                                     </td>
-
                                                     <td style={td}>
                                                         {isEditing ? (
                                                             <input
@@ -365,7 +366,6 @@ export default function Home() {
                                                             fmtMoney(inv.total)
                                                         )}
                                                     </td>
-
                                                     <td style={{ ...td, whiteSpace: 'nowrap' }}>
                                                         {isEditing ? (
                                                             <>

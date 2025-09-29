@@ -23,7 +23,7 @@ export type Invoice = {
 
 type Props = {
     file: File | null;
-    progress: number; // 0..100
+    progress: number; // 0..100 (upload progress)
     visible: boolean;
     /** Called after we hit the extractor endpoint */
     onExtract: (data: Invoice | null, error?: string) => void;
@@ -98,7 +98,7 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
             }
 
             const data = (await res.json()) as Invoice;
-            setExtractMsg('Extracted ✅ — review and save.');
+            setExtractMsg('Saved to DB ✅');
             onExtract(data, undefined);
         } catch (e: any) {
             const msg = e?.message || 'Extraction failed';
@@ -117,7 +117,7 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
                 ) : isPdf ? (
                     <iframe
                         src={(pdfUrl ?? '') + '#toolbar=0&navpanes=0&scrollbar=0'}
-                        width={220}
+                        width={260}
                         height={300}
                         style={{ border: '1px solid #ddd', borderRadius: 4 }}
                         title="PDF preview"
@@ -126,13 +126,15 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
                     <div className="pdf-fallback">{file?.type || 'FILE'}</div>
                 )}
 
+                {/* Upload progress (only while uploading) */}
                 {progress < 100 && (
                     <div className="progress-wrap">
                         <div className="progress-bar" style={{ width: `${progress}%` }} />
                     </div>
                 )}
 
-                {progress >= 100 && (
+                {/* Extract button */}
+                {progress >= 100 && !extracting && visible && (
                     <button
                         className="btn btn-brand"
                         type="button"
@@ -142,12 +144,60 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
                     </button>
                 )}
 
+                {/* Indeterminate progress shown during extract API call */}
+                {extracting && (
+                    <div className="progress-wrap" aria-label="extracting">
+                        <div className="progress-indeterminate" />
+                    </div>
+                )}
+
                 {extractMsg && (
                     <div role="status" style={{ marginTop: 8, opacity: 0.85 }}>
                         {extractMsg}
                     </div>
                 )}
             </div>
+
+            {/* Scoped styles for the indeterminate progress bar */}
+            <style jsx>{`
+                .progress-wrap {
+                    width: 100%;
+                    height: 6px;
+                    background: #f0f0f0;
+                    border-radius: 4px;
+                    margin-top: 10px;
+                    overflow: hidden;
+                }
+                .progress-bar {
+                    height: 100%;
+                    background: var(--brand-color);
+                    width: 0%;
+                    transition: width 0.12s linear;
+                }
+                .progress-indeterminate {
+                    position: relative;
+                    height: 100%;
+                    background: linear-gradient(
+                        90deg,
+                        rgba(255, 181, 3, 0) 0%,
+                        rgba(255, 181, 3, 0.6) 50%,
+                        rgba(255, 181, 3, 0) 100%
+                    );
+                    animation: indeterminate 1.2s infinite;
+                    transform: translateX(-100%);
+                }
+                @keyframes indeterminate {
+                    0% {
+                        transform: translateX(-100%);
+                    }
+                    50% {
+                        transform: translateX(0%);
+                    }
+                    100% {
+                        transform: translateX(100%);
+                    }
+                }
+            `}</style>
         </section>
     );
 }

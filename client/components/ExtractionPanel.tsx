@@ -40,8 +40,8 @@ type Props = {
     file: File | null;
     visible: boolean;
     apiBase?: string; // default http://localhost:4000
-    /** Seed from extractor result */
     initialInvoice?: Invoice;
+    onSaved?: () => void; // <-- notify parent after successful DB save
 };
 
 function normalizeInvoice(inv: Partial<Invoice> | null | undefined): Invoice {
@@ -115,7 +115,13 @@ function Field(props: {
     );
 }
 
-export default function ExtractionPanel({ file, visible, apiBase, initialInvoice }: Props) {
+export default function ExtractionPanel({
+    file,
+    visible,
+    apiBase,
+    initialInvoice,
+    onSaved,
+}: Props) {
     const base = apiBase ?? 'http://localhost:4000';
     const [thumb, setThumb] = useState<string>('');
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -123,12 +129,12 @@ export default function ExtractionPanel({ file, visible, apiBase, initialInvoice
     const [saving, setSaving] = useState(false);
     const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
-    // seed from extractor when it changes
+    // seed from extractor
     useEffect(() => {
         if (initialInvoice) setInvoice(initialInvoice);
     }, [initialInvoice]);
 
-    // handle preview (image OR pdf)
+    // handle preview
     useEffect(() => {
         if (!file) {
             setThumb('');
@@ -196,13 +202,12 @@ export default function ExtractionPanel({ file, visible, apiBase, initialInvoice
         [invoice.subtotal, invoice.tax, invoice.total]
     );
 
-    /** Save: ALWAYS POST (create new invoice) */
+    /** Save: POST and hide panel */
     const saveInvoice = async () => {
         setSaving(true);
         setSaveMsg(null);
         try {
             const payload = toApiPayload(invoice);
-
             if (!payload.vendor_name || !payload.invoice_number) {
                 setSaveMsg('vendor_name and invoice_number are required.');
                 setSaving(false);
@@ -222,7 +227,9 @@ export default function ExtractionPanel({ file, visible, apiBase, initialInvoice
 
             const saved = await res.json();
             setInvoice((prev) => normalizeInvoice({ ...prev, ...saved }));
-            setSaveMsg('Invoice saved ✅');
+
+            // Immediately notify parent
+            onSaved?.();
         } catch (e: any) {
             console.error('Save failed:', e);
             setSaveMsg(`Save failed: ${e.message || e.toString()}`);
@@ -273,7 +280,6 @@ export default function ExtractionPanel({ file, visible, apiBase, initialInvoice
                     className="extract-form"
                     autoComplete="off"
                     onSubmit={(e) => e.preventDefault()}>
-                    {/* Top-level invoice fields */}
                     <Field
                         label="VENDOR NAME"
                         id="vendor_name"
