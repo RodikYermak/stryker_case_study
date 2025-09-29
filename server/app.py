@@ -164,6 +164,30 @@ import json
 import PyPDF2
 from openai import OpenAI
 
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from sqlalchemy.dialects.postgresql import JSONB
+
+def _parse_date(s: str | None):
+    if not s:
+        return None
+    # accept "YYYY-MM-DD" or "MM/DD/YYYY"
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except ValueError:
+        try:
+            return datetime.strptime(s, "%m/%d/%Y").date()
+        except ValueError:
+            return None
+
+def _to_decimal(s):
+    if s is None:
+        return None
+    try:
+        return Decimal(str(s))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+
 app = Flask(__name__)
 CORS(app)
 
@@ -203,6 +227,33 @@ class User(db.Model):
     def json(self):
         return {"id": self.id, "name": self.name, "email": self.email}
 
+class Invoice(db.Model):
+    __tablename__ = "invoices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    vendor_name = db.Column(db.String(255), nullable=False)
+    invoice_number = db.Column(db.String(64), unique=True, nullable=False)
+    invoice_date = db.Column(db.Date, nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    # [{description, quantity, unit_price, total}]
+    line_items = db.Column(JSONB, nullable=False, default=list)
+    subtotal = db.Column(db.Numeric(12, 2), nullable=True)
+    tax = db.Column(db.Numeric(12, 2), nullable=True)
+    total = db.Column(db.Numeric(12, 2), nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "vendor_name": self.vendor_name,
+            "invoice_number": self.invoice_number,
+            "invoice_date": self.invoice_date.isoformat() if self.invoice_date else None,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "line_items": self.line_items or [],
+            "subtotal": str(self.subtotal) if self.subtotal is not None else None,
+            "tax": str(self.tax) if self.tax is not None else None,
+            "total": str(self.total) if self.total is not None else None,
+        }
+
 # Create tables INSIDE an app context
 with app.app_context():
     db.create_all()
@@ -211,6 +262,51 @@ with app.app_context():
 @app.get("/test")
 def test():
     return jsonify({"message": "The server is running"})
+
+
+@app.post("/api/flask/invoices")
+def create_invoice():
+    try:
+        data = request.get_json(force=True) or {}
+
+        inv = Invoice(
+            vendor_name=data.get("vendor_name", "").strip(),
+            invoice_number=data.get("invoice_number", "").strip(),
+            invoice_date=_parse_date(data.get("invoice_date")),
+            due_date=_parse_date(data.get("due_date")),
+            line_items=data.get("line_items") or [],
+            subtotal=_to_decimal(data.get("subtotal")),
+            tax=_to_decimal(data.get("tax")),
+            total=_to_decimal(data.get("total")),
+        )
+
+        if not inv.vendor_name or not inv.invoice_number:
+            return make_response(jsonify({"message": "vendor_name and invoice_number are required"}), 400)
+
+        db.session.add(inv)
+        db.session.commit()
+        return jsonify(inv.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return make_response(jsonify({"message": "error creating invoice", "error": str(e)}), 500)
+
+@app.get("/api/flask/invoices")
+def list_invoices():
+    try:
+        rows = Invoice.query.order_by(Invoice.id.desc()).all()
+        return jsonify([r.to_dict() for r in rows]), 200
+    except Exception as e:
+        return make_response(jsonify({"message": "error getting invoices", "error": str(e)}), 500)
+
+@app.get("/api/flask/invoices/<int:id>")
+def get_invoice(id):
+    try:
+        row = Invoice.query.get(id)
+        if not row:
+            return jsonify({"message": "invoice not found"}), 404
+        return jsonify(row.to_dict()), 200
+    except Exception as e:
+        return make_response(jsonify({"message": "error getting invoice", "error": str(e)}), 500)
 
 @app.post("/api/flask/users")
 def create_user():
@@ -269,3 +365,54 @@ def delete_user(id):
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+
+# {
+#   "vendor_name": "Acme Corp",
+#   "invoice_number": "INV-1001",
+#   "invoice_date": "2025-06-16",
+#   "due_date": "2025-06-30",
+#   "line_items": [
+#     {
+#       "description": "Widget A",
+#       "quantity": 2,
+#       "unit_price": 19.99,
+#       "total": 39.98
+#     },
+#     {
+#       "description": "Widget B",
+#       "quantity": 1,
+#       "unit_price": 10.0,
+#       "total": 10.0
+#     }
+#   ],
+#   "subtotal": 49.98,
+#   "tax": 4.0,
+#   "total": 53.98
+# }
+
+# {
+#   "vendor_name": "Global Supplies Ltd.",
+#   "invoice_number": "INV-2002",
+#   "invoice_date": "2025-07-01",
+#   "due_date": "2025-07-15",
+#   "line_items": [
+#     {
+#       "description": "Office Chairs",
+#       "quantity": 5,
+#       "unit_price": 85.50,
+#       "total": 427.50
+#     },
+#     {
+#       "description": "Standing Desks",
+#       "quantity": 2,
+#       "unit_price": 299.99,
+#       "total": 599.98
+#     }
+#   ],
+#   "subtotal": 1027.48,
+#   "tax": 82.20,
+#   "total": 1109.68
+# }
