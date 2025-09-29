@@ -3,10 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import ModelPicker from '@/components/ModelPicker';
 import Dropzone from '@/components/Dropzone';
-import Preview from '@/components/Preview';
-import ExtractionPanel from '@/components/ExtractionPanel';
+import Preview, { type Invoice as ExtractedInvoice } from '@/components/Preview';
+import ExtractionPanel, { type Invoice as PanelInvoice } from '@/components/ExtractionPanel';
 import axios from 'axios';
-
 
 type LineItem = {
     description: string;
@@ -35,6 +34,9 @@ export default function Home() {
     const [phase, setPhase] = useState<'idle' | 'uploading' | 'ready' | 'extracted'>('idle');
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+    // extracted invoice handed to the panel
+    const [extracted, setExtracted] = useState<PanelInvoice | null>(null);
 
     // editing state
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -81,6 +83,7 @@ export default function Home() {
         setSelected(arr[0] || null);
         setProgress(0);
         setPhase('uploading');
+        setExtracted(null);
     };
 
     const showPreview = useMemo(() => phase === 'uploading' || phase === 'ready', [phase]);
@@ -99,7 +102,6 @@ export default function Home() {
             subtotal: inv.subtotal,
             tax: inv.tax,
             total: inv.total,
-            // keeping line_items out of inline edit to keep table compact
         });
     };
 
@@ -115,10 +117,7 @@ export default function Home() {
     const saveEdit = async (id: number) => {
         try {
             setSavingRow(id);
-            // send only provided fields (PATCH). Server already parses dates & decimals.
             const body: any = {};
-
-            // Only include keys that exist in editDraft (avoid sending undefined)
             (
                 [
                     'vendor_name',
@@ -171,13 +170,25 @@ export default function Home() {
                 <ModelPicker value={model} onChange={setModel} />
                 <div>
                     <Dropzone onFiles={onFiles} />
+
                     <Preview
                         file={selected}
                         progress={progress}
-                        onExtract={() => setPhase('extracted')}
                         visible={showPreview}
+                        apiBase="http://localhost:4000"
+                        onExtract={(data: ExtractedInvoice | null) => {
+                            if (data) setExtracted(data as PanelInvoice);
+                            setPhase('extracted');
+                        }}
                     />
-                    <ExtractionPanel file={selected} visible={phase === 'extracted'} />
+
+                    <ExtractionPanel
+                        file={selected}
+                        visible={phase === 'extracted'}
+                        apiBase="http://localhost:4000"
+                        initialInvoice={extracted ?? undefined}
+                    />
+
                     {/* Invoices table (editable) */}
                     <section style={{ marginTop: 32 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
