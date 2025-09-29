@@ -2,7 +2,7 @@ type Props = {
   value: string;
   onChange: (v: string) => void;
 };
-const MODELS = ["ChatGPT 5", "ChatGPT 4.1", "Claude 3.5 Sonnet", "Gemini 1.5 Pro"];
+const MODELS = ["ChatGPT 5", "Claude 3.5 Sonnet", "Gemini 1.5 Pro", "Grok 4"];
 
 export default function ModelPicker({ value, onChange }: Props) {
   return (
