@@ -167,6 +167,7 @@ from openai import OpenAI
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.exc import IntegrityError
 
 def _parse_date(s: str | None):
     if not s:
@@ -307,6 +308,99 @@ def get_invoice(id):
         return jsonify(row.to_dict()), 200
     except Exception as e:
         return make_response(jsonify({"message": "error getting invoice", "error": str(e)}), 500)
+
+@app.put("/api/flask/invoices/<int:id>")
+def update_invoice(id: int):
+    """Full replace: all mutable fields expected in body."""
+    try:
+        inv = Invoice.query.get(id)
+        if not inv:
+            return jsonify({"message": "invoice not found"}), 404
+
+        data = request.get_json(force=True) or {}
+
+        # required fields for a full update
+        vendor_name   = (data.get("vendor_name") or "").strip()
+        invoice_number= (data.get("invoice_number") or "").strip()
+        if not vendor_name or not invoice_number:
+            return jsonify({"message": "vendor_name and invoice_number are required"}), 400
+
+        inv.vendor_name    = vendor_name
+        inv.invoice_number = invoice_number
+        inv.invoice_date   = _parse_date(data.get("invoice_date"))
+        inv.due_date       = _parse_date(data.get("due_date"))
+        inv.line_items     = data.get("line_items") or []
+        inv.subtotal       = _to_decimal(data.get("subtotal"))
+        inv.tax            = _to_decimal(data.get("tax"))
+        inv.total          = _to_decimal(data.get("total"))
+
+        db.session.commit()
+        return jsonify(inv.to_dict()), 200
+    except IntegrityError as ie:
+        db.session.rollback()
+        return jsonify({"message": "invoice_number must be unique", "error": str(ie)}), 409
+    except Exception as e:
+        db.session.rollback()
+        return make_response(jsonify({"message": "error updating invoice", "error": str(e)}), 500)
+
+
+@app.patch("/api/flask/invoices/<int:id>")
+def patch_invoice(id: int):
+    """Partial update: only provided fields are changed."""
+    try:
+        inv = Invoice.query.get(id)
+        if not inv:
+            return jsonify({"message": "invoice not found"}), 404
+
+        data = request.get_json(force=True) or {}
+
+        if "vendor_name" in data:
+            vn = (data.get("vendor_name") or "").strip()
+            if not vn:
+                return jsonify({"message": "vendor_name cannot be empty"}), 400
+            inv.vendor_name = vn
+
+        if "invoice_number" in data:
+            inum = (data.get("invoice_number") or "").strip()
+            if not inum:
+                return jsonify({"message": "invoice_number cannot be empty"}), 400
+            inv.invoice_number = inum
+
+        if "invoice_date" in data:
+            inv.invoice_date = _parse_date(data.get("invoice_date"))
+
+        if "due_date" in data:
+            inv.due_date = _parse_date(data.get("due_date"))
+
+        if "line_items" in data:
+            inv.line_items = data.get("line_items") or []
+
+        for money_field in ("subtotal", "tax", "total"):
+            if money_field in data:
+                setattr(inv, money_field, _to_decimal(data.get(money_field)))
+
+        db.session.commit()
+        return jsonify(inv.to_dict()), 200
+    except IntegrityError as ie:
+        db.session.rollback()
+        return jsonify({"message": "invoice_number must be unique", "error": str(ie)}), 409
+    except Exception as e:
+        db.session.rollback()
+        return make_response(jsonify({"message": "error patching invoice", "error": str(e)}), 500)
+
+
+@app.delete("/api/flask/invoices/<int:id>")
+def delete_invoice(id: int):
+    try:
+        inv = Invoice.query.get(id)
+        if not inv:
+            return jsonify({"message": "invoice not found"}), 404
+        db.session.delete(inv)
+        db.session.commit()
+        return jsonify({"message": "invoice deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return make_response(jsonify({"message": "error deleting invoice", "error": str(e)}), 500)
 
 @app.post("/api/flask/users")
 def create_user():
