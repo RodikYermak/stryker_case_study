@@ -72,7 +72,7 @@ export default function Home() {
                         visible={showPreview}
                     />
                     <ExtractionPanel file={selected} visible={phase === 'extracted'} />
-                    <FileList files={files} />
+                    {/* <FileList files={files} /> */}
                 </div>
             </main>
         </>

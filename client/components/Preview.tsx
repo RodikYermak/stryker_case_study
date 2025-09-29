@@ -37,9 +37,12 @@ export default function Preview({ file, progress, onExtract, visible }: Props) {
                     <div className="pdf-fallback">{isPdf ? 'PDF' : file?.type || 'FILE'}</div>
                 )}
 
-                <div className="progress-wrap" aria-hidden={progress >= 100}>
-                    <div className="progress-bar" style={{ width: `${progress}%` }} />
-                </div>
+                {/* show progress bar only while uploading */}
+                {progress < 100 && (
+                    <div className="progress-wrap">
+                        <div className="progress-bar" style={{ width: `${progress}%` }} />
+                    </div>
+                )}
 
                 {progress >= 100 && (
                     <button className="btn btn-brand" type="button" onClick={onExtract}>
