@@ -1,4 +1,3 @@
-// components/InvoicesSection.tsx
 import React from 'react';
 
 export type LineItem = {
