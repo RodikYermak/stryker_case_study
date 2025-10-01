@@ -247,8 +247,8 @@ export default function ExtractionPanel({
                     {isPdf ? (
                         <iframe
                             src={(pdfUrl ?? '') + '#toolbar=0&navpanes=0&scrollbar=0'}
-                            width={300}
-                            height={360}
+                            width={'100%'}
+                            height={717}
                             style={{ border: '1px solid #ddd', borderRadius: 4 }}
                             title="PDF preview"
                         />
