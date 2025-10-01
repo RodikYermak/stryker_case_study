@@ -42,6 +42,7 @@ type Props = {
 
     // display options
     showAllItems?: boolean; // false = compact preview; true = list all items
+    onDownloadExcel?: () => void;
 };
 
 const InvoicesSection: React.FC<Props> = ({
@@ -61,6 +62,7 @@ const InvoicesSection: React.FC<Props> = ({
     fmtDate,
     fmtMoney,
     showAllItems = false,
+    onDownloadExcel,
 }) => {
     return (
         <section style={{ marginTop: 32 }}>
@@ -75,6 +77,15 @@ const InvoicesSection: React.FC<Props> = ({
                     aria-busy={loading}
                     aria-label="Refresh">
                     {loading ? 'Refreshing…' : 'Refresh'}
+                </button>
+
+                <button
+                    className="btn"
+                    onClick={onDownloadExcel}
+                    disabled={!invoices?.length}
+                    title="Download Excel"
+                    aria-label="Download Excel">
+                    Download Excel
                 </button>
             </div>
 
