@@ -1,6 +1,6 @@
 import Image from 'next/image';
 
-export default function Header() {
+export default function Header({ credits = 0 }: { credits?: number }) {
     return (
         <header className="app-header">
             <div className="container header-wrap">
@@ -18,7 +18,7 @@ export default function Header() {
 
                 <div className="header-right">
                     <div className="credits" aria-label="Credits">
-                        <span className="credits-value">99</span>
+                        <span className="credits-value">{credits}</span>
                         <span className="credits-label">Credits</span>
                     </div>
                     <button className="user-btn" aria-label="Account & settings">

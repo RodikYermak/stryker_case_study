@@ -29,9 +29,26 @@ type Props = {
     onExtract: (data: Invoice | null, error?: string) => void;
     /** Optional: override API base (defaults to http://localhost:4000) */
     apiBase?: string;
+    /** If false, disable extraction (e.g., out of credits) */
+    canExtract?: boolean;
 };
 
-export default function Preview({ file, progress, visible, onExtract, apiBase }: Props) {
+function extractMessage(u: unknown): string | undefined {
+    if (typeof u === 'object' && u !== null && 'message' in u) {
+        const m = (u as { message?: unknown }).message;
+        return typeof m === 'string' ? m : undefined;
+    }
+    return undefined;
+}
+
+export default function Preview({
+    file,
+    progress,
+    visible,
+    onExtract,
+    apiBase,
+    canExtract = true,
+}: Props) {
     const base = apiBase ?? 'http://localhost:4000';
 
     const [imageUrl, setImageUrl] = useState<string>('');
@@ -90,8 +107,13 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
             });
 
             if (!res.ok) {
-                const err = await res.json().catch(() => ({} as any));
-                const msg = err?.message || `Extractor HTTP ${res.status}`;
+                let errJson: unknown = null;
+                try {
+                    errJson = await res.json();
+                } catch {
+                    // ignore parse error; fall back to status
+                }
+                const msg = extractMessage(errJson) ?? `Extractor HTTP ${res.status}`;
                 setExtractMsg(msg);
                 onExtract(null, msg);
                 return;
@@ -100,8 +122,8 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
             const data = (await res.json()) as Invoice;
             setExtractMsg('Saved to DB ✅');
             onExtract(data, undefined);
-        } catch (e: any) {
-            const msg = e?.message || 'Extraction failed';
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Extraction failed';
             setExtractMsg(msg);
             onExtract(null, msg);
         } finally {
@@ -139,8 +161,13 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
                         className="btn btn-brand"
                         type="button"
                         onClick={handleExtract}
-                        disabled={!file || extracting}>
-                        {extracting ? 'Extracting…' : 'Extract Information With AI'}
+                        disabled={!file || extracting || !canExtract}
+                        title={canExtract ? 'Extract' : 'Out of credits'}>
+                        {!canExtract
+                            ? 'Out of credits'
+                            : extracting
+                            ? 'Extracting…'
+                            : 'Extract Information With AI'}
                     </button>
                 )}
 

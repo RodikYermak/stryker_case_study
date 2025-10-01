@@ -28,6 +28,7 @@ export default function Home() {
     const [editDraft, setEditDraft] = useState<Partial<Invoice>>({});
     const [savingRow, setSavingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
+    const [credits, setCredits] = useState<number>(20);
 
     // demo upload simulator
     useEffect(() => {
@@ -43,6 +44,19 @@ export default function Home() {
         }, 140);
         return () => clearInterval(t);
     }, [phase]);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('credits');
+            if (saved !== null) setCredits(Math.max(0, Number(saved) || 0));
+        } catch {}
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('credits', String(credits));
+        } catch {}
+    }, [credits]);
 
     // Fetch invoices
     const loadInvoices = async () => {
@@ -156,7 +170,7 @@ export default function Home() {
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
             </Head>
 
-            <Header />
+            <Header credits={credits} />
 
             <main className="container main-wrap">
                 <ModelPicker value={model} onChange={setModel} />
@@ -169,9 +183,14 @@ export default function Home() {
                         progress={progress}
                         visible={showPreview}
                         apiBase="http://localhost:4000"
+                        canExtract={credits > 0}
                         onExtract={(data: ExtractedInvoice | null) => {
-                            if (data) setExtracted(data as PanelInvoice);
-                            setPhase('extracted');
+                            if (data) {
+                                setExtracted(data as PanelInvoice);
+                                setPhase('extracted');
+                                // decrement on success
+                                setCredits((c) => Math.max(0, c - 1));
+                            }
                         }}
                     />
 
