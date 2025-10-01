@@ -267,7 +267,7 @@ export default function ExtractionPanel({
                         disabled={saving}
                         onClick={saveInvoice}
                         title="Save invoice to DB">
-                        {saving ? 'Saving…' : 'Save to DB'}
+                        {saving ? 'Saving…' : 'Save Results'}
                     </button>
                     {saveMsg && (
                         <div role="status" style={{ marginTop: 8, opacity: 0.8 }}>
@@ -348,7 +348,7 @@ export default function ExtractionPanel({
                                 className="btn btn-danger"
                                 onClick={() => removeLineItem(idx)}
                                 aria-label={`Remove line item ${idx + 1}`}>
-                                Remove
+                                - Remove Line Item
                             </button>
                         </div>
                     ))}
