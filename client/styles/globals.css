@@ -163,7 +163,7 @@ input {
     border-radius: 50%;
     border: 1px solid var(--border-color);
     background: #fff;
-    cursor: pointer;
+    /* cursor: pointer; */
 }
 .user-btn img {
     width: 18px;
@@ -317,7 +317,7 @@ input {
 }
 .extraction-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 50% 1fr;
     gap: 34px;
     align-items: start;
 }
