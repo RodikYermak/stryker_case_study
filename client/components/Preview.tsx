@@ -140,7 +140,7 @@ export default function Preview({ file, progress, visible, onExtract, apiBase }:
                         type="button"
                         onClick={handleExtract}
                         disabled={!file || extracting}>
-                        {extracting ? 'Extracting…' : 'Extract Information'}
+                        {extracting ? 'Extracting…' : 'Extract Information With AI'}
                     </button>
                 )}
 
