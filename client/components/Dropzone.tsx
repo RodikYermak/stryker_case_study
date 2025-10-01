@@ -69,7 +69,7 @@ export default function Dropzone({ onFiles }: Props) {
                     />
                 </svg>
                 <p className="dropzone-text">
-                    <strong>Drag</strong> your <b>PDF, JPG</b> or <b>PNG</b> invoices here
+                    <strong>Upload or Drag</strong> your <b>PDF</b> invoice here
                 </p>
                 <button type="button" className="btn btn-ghost" onClick={openPicker}>
                     Browse files

@@ -247,8 +247,8 @@ export default function ExtractionPanel({
                     {isPdf ? (
                         <iframe
                             src={(pdfUrl ?? '') + '#toolbar=0&navpanes=0&scrollbar=0'}
-                            width={300}
-                            height={360}
+                            width={'100%'}
+                            height={717}
                             style={{ border: '1px solid #ddd', borderRadius: 4 }}
                             title="PDF preview"
                         />
@@ -267,7 +267,7 @@ export default function ExtractionPanel({
                         disabled={saving}
                         onClick={saveInvoice}
                         title="Save invoice to DB">
-                        {saving ? 'Saving…' : 'Save to DB'}
+                        {saving ? 'Saving…' : 'Save Results'}
                     </button>
                     {saveMsg && (
                         <div role="status" style={{ marginTop: 8, opacity: 0.8 }}>
@@ -348,7 +348,7 @@ export default function ExtractionPanel({
                                 className="btn btn-danger"
                                 onClick={() => removeLineItem(idx)}
                                 aria-label={`Remove line item ${idx + 1}`}>
-                                Remove
+                                - Remove Line Item
                             </button>
                         </div>
                     ))}
