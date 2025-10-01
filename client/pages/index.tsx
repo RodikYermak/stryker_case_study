@@ -8,6 +8,7 @@ import ExtractionPanel, { type Invoice as PanelInvoice } from '@/components/Extr
 import axios from 'axios';
 
 import InvoicesSection, { type InvoiceRow as Invoice } from '@/components/InvoicesSection';
+import { downloadInvoicesExcel } from '@/utils/downloadInvoicesExcel';
 
 export default function Home() {
     const [model, setModel] = useState('ChatGPT 5');
@@ -144,6 +145,10 @@ export default function Home() {
         }
     };
 
+    const handleDownloadExcel = () => {
+        downloadInvoicesExcel(invoices, 'invoices.xlsx');
+    };
+
     return (
         <>
             <Head>
@@ -198,6 +203,7 @@ export default function Home() {
                         deletingRow={deletingRow}
                         fmtDate={fmtDate}
                         fmtMoney={fmtMoney}
+                        onDownloadExcel={handleDownloadExcel}
                     />
                 </div>
             </main>
