@@ -32,7 +32,10 @@ def _to_decimal(s):
         return None
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": [
+    "http://localhost:3000",
+    "https://stryker-case-study.vercel.app"
+]}})
 
 # DB config (normalize URL + sane defaults)
 raw_url = os.environ.get("DATABASE_URL", "")
