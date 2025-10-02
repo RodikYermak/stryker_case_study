@@ -135,7 +135,7 @@ export default function Home() {
                 keys.filter((k) => editDraft[k] !== undefined).map((k) => [k, editDraft[k]])
             ) as Partial<Invoice>;
 
-            await axios.patch(`http://localhost:4000/api/flask/invoices/${id}`, body);
+            await axios.patch(`${API_BASE}/api/flask/invoices/${id}`, body);
             await loadInvoices();
             cancelEdit();
         } catch (e) {
@@ -150,7 +150,7 @@ export default function Home() {
         if (!confirm(`Delete invoice #${id}? This cannot be undone.`)) return;
         try {
             setDeletingRow(id);
-            await axios.delete(`http://localhost:4000/api/flask/invoices/${id}`);
+            await axios.delete(`${API_BASE}/api/flask/invoices/${id}`);
             setInvoices((rows) => rows.filter((r) => r.id !== id));
         } catch (e) {
             console.error('Delete failed:', e);
