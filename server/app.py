@@ -10,6 +10,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
+import re
 
 def _parse_date(s: str | None):
     if not s:
@@ -32,10 +33,14 @@ def _to_decimal(s):
         return None
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": [
-    "http://localhost:3000",
-    "https://stryker-case-study.vercel.app"
-]}})
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:3000",
+            re.compile(r"https://.*\.vercel\.app")  # previews + prod
+        ]
+    }
+})
 
 # DB config (normalize URL + sane defaults)
 raw_url = os.environ.get("DATABASE_URL", "")

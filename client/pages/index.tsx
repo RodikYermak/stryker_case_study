@@ -11,6 +11,7 @@ import InvoicesSection, { type InvoiceRow as Invoice } from '@/components/Invoic
 import { downloadInvoicesExcel } from '@/utils/downloadInvoicesExcel';
 
 export default function Home() {
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
     const [model, setModel] = useState('ChatGPT 5');
     const [, setFiles] = useState<File[]>([]);
     const [selected, setSelected] = useState<File | null>(null);
@@ -62,7 +63,7 @@ export default function Home() {
     const loadInvoices = async () => {
         try {
             setLoadingInvoices(true);
-            const res = await axios.get<Invoice[]>(`http://localhost:4000/api/flask/invoices`);
+            const res = await axios.get<Invoice[]>(`${API_BASE}/api/flask/invoices`);
             setInvoices(Array.isArray(res.data) ? res.data : []);
         } catch (e) {
             console.error('Error fetching invoices:', e);
@@ -182,7 +183,7 @@ export default function Home() {
                         file={selected}
                         progress={progress}
                         visible={showPreview}
-                        apiBase="http://localhost:4000"
+                        apiBase={API_BASE}
                         canExtract={credits > 0}
                         onExtract={(data: ExtractedInvoice | null) => {
                             if (data) {
@@ -197,7 +198,7 @@ export default function Home() {
                     <ExtractionPanel
                         file={selected}
                         visible={phase === 'extracted'}
-                        apiBase="http://localhost:4000"
+                        apiBase={API_BASE}
                         initialInvoice={extracted ?? undefined}
                         onSaved={async () => {
                             await loadInvoices();
