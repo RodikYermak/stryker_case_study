@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Header from '@/components/Header';
 import ModelPicker from '@/components/ModelPicker';
 import Dropzone from '@/components/Dropzone';
@@ -12,6 +12,7 @@ import { downloadInvoicesExcel } from '@/utils/downloadInvoicesExcel';
 
 export default function Home() {
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+    console.log(API_BASE);
     const [model, setModel] = useState('ChatGPT 5');
     const [, setFiles] = useState<File[]>([]);
     const [selected, setSelected] = useState<File | null>(null);
@@ -59,8 +60,7 @@ export default function Home() {
         } catch {}
     }, [credits]);
 
-    // Fetch invoices
-    const loadInvoices = async () => {
+    const loadInvoices = useCallback(async () => {
         try {
             setLoadingInvoices(true);
             const res = await axios.get<Invoice[]>(`${API_BASE}/api/flask/invoices`);
@@ -70,11 +70,11 @@ export default function Home() {
         } finally {
             setLoadingInvoices(false);
         }
-    };
+    }, [API_BASE]);
 
     useEffect(() => {
         loadInvoices();
-    }, []);
+    }, [loadInvoices]);
 
     const onFiles = (fl: FileList | File[]) => {
         const arr = Array.from(fl);
