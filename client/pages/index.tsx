@@ -12,7 +12,6 @@ import { downloadInvoicesExcel } from '@/utils/downloadInvoicesExcel';
 
 export default function Home() {
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
-    console.log(API_BASE);
     const [model, setModel] = useState('ChatGPT 5');
     const [, setFiles] = useState<File[]>([]);
     const [selected, setSelected] = useState<File | null>(null);
