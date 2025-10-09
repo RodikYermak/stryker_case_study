@@ -62,12 +62,13 @@ EXTRACTION_PROMPT = """You are a financial assistant that extracts structured da
 Extract the following fields from the text:
 - vendor_name
 - invoice_number
-- invoice_date
-- due_date
+- invoice_date (format: YYYY-MM-DD)
+- due_date (format: YYYY-MM-DD)
 - line_items: [{description, quantity, unit_price, total}]
 - subtotal
 - tax
 - total
+
 Output STRICT JSON only, no commentary.
 """
 
@@ -122,13 +123,16 @@ def extract_invoice_from_file():
         except Exception as e:
             return jsonify({"message": "Failed to parse extraction JSON", "raw": raw, "error": str(e)}), 502
 
+        inv_date = _parse_date(data.get("invoice_date"))
+        due_date = _parse_date(data.get("due_date"))
+
         # Normalize for your form (strings for money/date are fine; server will coerce on save)
         normalized = {
             "id": None,
             "vendor_name": (data.get("vendor_name") or "").strip(),
             "invoice_number": (data.get("invoice_number") or "").strip(),
-            "invoice_date": data.get("invoice_date") or None,  # "YYYY-MM-DD" or "MM/DD/YYYY" OK
-            "due_date": data.get("due_date") or None,
+            "invoice_date": inv_date.isoformat() if inv_date else None,  # <-- ISO
+            "due_date": due_date.isoformat() if due_date else None,      # <-- ISO
             "line_items": data.get("line_items") if isinstance(data.get("line_items"), list) else [],
             "subtotal": str(data.get("subtotal")) if data.get("subtotal") is not None else "",
             "tax": str(data.get("tax")) if data.get("tax") is not None else "",
