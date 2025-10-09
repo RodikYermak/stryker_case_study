@@ -98,16 +98,20 @@ const InvoicesSection: React.FC<Props> = ({
                 <div style={{ overflowX: 'auto', marginTop: 12 }}>
                     <table className="invoices-table">
                         <colgroup>
-                            <col style={{ width: 80 }} /> {/* ID */}
-                            <col style={{ width: '18%' }} /> {/* Vendor */}
-                            <col style={{ width: '12%' }} /> {/* Invoice # */}
-                            <col style={{ width: '10%' }} /> {/* Invoice Date */}
-                            <col style={{ width: '10%' }} /> {/* Due Date */}
-                            <col style={{ width: '10%' }} /> {/* Items (flex) */}
-                            <col style={{ width: '10%' }} /> {/* Subtotal */}
-                            <col style={{ width: '8%' }} /> {/* Tax */}
-                            <col style={{ width: '10%' }} /> {/* Total */}
-                            <col style={{ width: 200 }} /> {/* Actions */}
+                            {[
+                                80, // ID
+                                '18%', // Vendor
+                                '12%', // Invoice #
+                                '10%', // Invoice Date
+                                '10%', // Due Date
+                                '10%', // Items
+                                '10%', // Subtotal
+                                '8%', // Tax
+                                '10%', // Total
+                                200, // Actions
+                            ].map((w, i) => (
+                                <col key={i} style={{ width: w as any }} />
+                            ))}
                         </colgroup>
 
                         <thead>
